@@ -2,27 +2,44 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
 
+from landscape.Square import Square
+class Grid:
 
-class SampleEnv:
-    def __init__(self, n, m):
-        self.n = n
-        self.m = m
-        self.grid = np.zeros((n, m), dtype=int)
-        # turn 5 squares into bad plants by random
-        # save these squares in a list called bad_plant_positions
-        self.bad_plant_positions = []
-        for i in range(7):
-            x = np.random.randint(0, m)
-            y = np.random.randint(0, n)
-            self.bad_plant_positions.append((x, y))
+    def __init__(self, x, y):
+        """
+        Constructor for the Grid class
+        """
+        self.x = x
+        self.y = y
+        self.landscapeArea = x * y
+        self.grid = self.createGrid(x, y)
 
-    def plant(self, x, y):
-        self.grid[x, y] = 1
+
+
+    def createGrid(self, x, y):
+        """
+        Method to create a grid of squares
+        :param x: x size of the grid
+        :param y: y size of the grid
+        :return: the grid
+        """
+        self.grid = np.empty((x, y), dtype=object)
+
+        for i in range(x):
+            for j in range(y):
+                if i == 7 and j < 4:
+                    self.grid[i, j] = Square(i, j, True, True)
+                elif i > 4 and j > 3:
+                    self.grid[i, j] = Square(i, j, False, False)
+                    self.landscapeArea-=1
+                else:
+                    self.grid[i, j] = Square(i, j, False, True)
         return self.grid
 
-    def bad_plant(self, x, y):
-        self.grid[x, y] = 5
+    def plant(self, x, y, tree):
+        self.grid[x, y].plant(tree)
         return self.grid
+
 
     def plot_grid(self, qTable):
         """
@@ -75,9 +92,25 @@ class SampleEnv:
 
     def reset(self):
         """
-        Resets the grid to the initial state with no trees.
+        Method to reset the grid
+        :return: the grid
         """
-        self.grid = np.zeros((self.m, self.n), dtype=int)
+        self.grid = np.zeros((self.x, self.y), dtype=int)
+        return self.grid
+
+    def step(self, action):
+        """
+        Method to take a step in the environment
+        :param action: the action to take
+        :return: the new state, reward, and done
+        """
+        pass
+
+    def get_possible_actions(self):
+        """
+        Get all possible actions (positions) in the grid where a tree can be planted.
+        """
+        return [(i, j) for i in range(self.x) for j in range(self.y) if self.grid[i, j].plantable]
 
     def step(self, action):
         """
@@ -115,38 +148,3 @@ class SampleEnv:
         state = self.grid.copy()  # The new state is the updated grid
         done = np.all(self.grid != 0)  # Episode ends if all cells are filled
         return state, reward, done
-
-    def get_possible_actions(self):
-        """
-        Get all possible actions (positions) in the grid where a tree can be planted.
-        """
-        return [(i, j) for i in range(self.m) for j in range(self.n) if self.grid[i, j] == 0]
-
-    def get_best_action_for_spot(self, spot, q_table):
-        # Initialize the maximum Q-value to a very small number
-        max_q_value = -float('inf')
-        # Initialize the best action to None
-        best_action = None
-        # Iterate over all the actions in the Q-table
-        for state_action, q_value in q_table.items():
-            state, action = state_action
-            # If the action corresponds to the spot
-            if action[0] == spot:
-                # Update the maximum Q-value and the best action if necessary
-                if q_value > max_q_value:
-                    max_q_value = q_value
-                    best_action = action[1]
-                    if best_action == None: # No action
-                        best_action = 1
-        # Return the best action
-        #print("Best action for spot", spot, "is", best_action, "with Q-value", max_q_value)
-        return best_action
-
-
-if __name__ == "__main__":
-    env = SampleEnv(10, 10)
-    tree_positions = [(2, 3), (4, 5), (6, 7), (8, 2), (9, 9)]
-    # loop through the tree_positions and plant the trees
-    for tree in tree_positions:
-        env.plant(tree[0], tree[1])
-    env.plot_grid()
